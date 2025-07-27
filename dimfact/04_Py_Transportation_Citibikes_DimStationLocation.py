@@ -1,4 +1,4 @@
-# Author: @yourname
+# Author: Patrick Okare
 
 dimstationlocation_df = spark.sql("""
 WITH ProcessedFiles AS (
