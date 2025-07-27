@@ -4,7 +4,7 @@ This repository contains the full implementation of a modern **CitiBike NYC Lake
 
 > 📍 Project Title: `Citibikes-Integration`  
 > 🧱 Architecture: Medallion (Bronze → Silver → Gold)  
-> 📊 Modeling: Dimensional (Star Schema)  
+> 📊 Modelling: Dimensional (Star Schema)  
 > ☁️ Platform: Microsoft Fabric (Lakehouse, Pipelines, Notebooks)
 
 ---
@@ -15,7 +15,7 @@ This repository contains the full implementation of a modern **CitiBike NYC Lake
 ├── ingestion/           # Raw data ingestion logic (bronze layer)
 ├── pipelines/           # Fabric Data Pipelines for orchestration
 ├── utils/               # Reusable helper functions & constants
-├── dimfact/             # Dimensional modeling (dim/fact table logic)
+├── dimfact/             # Dimensional modelling (dim/fact table logic)
 └── README.md            # Project overview and documentation
 
 # 🚴 CitiBike NYC Fabric Lakehouse Project (`dimfact`)
