@@ -1,0 +1,325 @@
+{
+  "properties": {
+    "activities": [
+      {
+        "type": "GetMetadata",
+        "typeProperties": {
+          "datasetSettings": {
+            "type": "DelimitedText",
+            "typeProperties": {
+              "location": {
+                "type": "AzureBlobFSLocation",
+                "fileSystem": "landing",
+                "folderPath": {
+                  "value": "@concat(\n   \n     toLower(pipeline().parameters.p_PlatformName)\n      ,'/'\n    ,toLower(pipeline().parameters.p_Domain)\n    ,'/'\n    , toLower(pipeline().parameters.p_ProjectName)\n    ,'/'\n    , toLower(pipeline().parameters.p_DataSourceName)\n     ,'/'\n    , toLower(pipeline().parameters.p_EntityName)\n)",
+                  "type": "Expression"
+                },
+                "fileName": {
+                  "value": "@variables('v_FileName')",
+                  "type": "Expression"
+                }
+              },
+              "columnDelimiter": ",",
+              "quoteChar": "\"",
+              "escapeChar": "\\",
+              "firstRowAsHeader": true
+            },
+            "schema": [],
+            "externalReferences": {
+              "connection": "bc7273da-a3ef-46dd-8687-f5a403cf491f"
+            },
+            "annotations": []
+          },
+          "fieldList": [
+            "exists"
+          ],
+          "storeSettings": {
+            "type": "AzureBlobFSReadSettings",
+            "enablePartitionDiscovery": false
+          },
+          "formatSettings": {
+            "type": "DelimitedTextReadSettings"
+          }
+        },
+        "policy": {
+          "timeout": "0.12:00:00",
+          "retry": 0,
+          "retryIntervalInSeconds": 30,
+          "secureInput": false,
+          "secureOutput": false
+        },
+        "name": "Check If File Exists",
+        "dependsOn": [
+          {
+            "activity": "Set FileName",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ]
+      },
+      {
+        "type": "IfCondition",
+        "typeProperties": {
+          "expression": {
+            "value": "@activity('Check If File Exists').output.exists",
+            "type": "Expression"
+          },
+          "ifTrueActivities": [
+            {
+              "type": "TridentNotebook",
+              "typeProperties": {
+                "notebookId": "31aee85e-9ba7-491a-b916-d046f1035fb6",
+                "workspaceId": "00000000-0000-0000-0000-000000000000",
+                "parameters": {
+                  "p_Domain": {
+                    "value": {
+                      "value": "@pipeline().parameters.p_Domain",
+                      "type": "Expression"
+                    },
+                    "type": "string"
+                  },
+                  "p_ProjectName": {
+                    "value": {
+                      "value": "@pipeline().parameters.p_ProjectName",
+                      "type": "Expression"
+                    },
+                    "type": "string"
+                  },
+                  "p_DataSourceName": {
+                    "value": {
+                      "value": "@pipeline().parameters.p_DataSourceName",
+                      "type": "Expression"
+                    },
+                    "type": "string"
+                  },
+                  "p_PlatformName": {
+                    "value": {
+                      "value": "@pipeline().parameters.p_PlatformName",
+                      "type": "Expression"
+                    },
+                    "type": "string"
+                  },
+                  "p_EntityName": {
+                    "value": {
+                      "value": "@pipeline().parameters.p_EntityName",
+                      "type": "Expression"
+                    },
+                    "type": "string"
+                  },
+                  "landing_folder_path": {
+                    "value": {
+                      "value": "@pipeline().parameters.landing_folder_path",
+                      "type": "Expression"
+                    },
+                    "type": "string"
+                  },
+                  "p_ProcessingTime": {
+                    "value": {
+                      "value": "@pipeline().TriggerTime",
+                      "type": "Expression"
+                    },
+                    "type": "string"
+                  }
+                }
+              },
+              "policy": {
+                "timeout": "0.12:00:00",
+                "retry": 0,
+                "retryIntervalInSeconds": 30,
+                "secureInput": false,
+                "secureOutput": false
+              },
+              "name": "Landing To Silver Zone",
+              "dependsOn": []
+            },
+            {
+              "type": "ExecutePipeline",
+              "typeProperties": {
+                "pipeline": {
+                  "referenceName": "78d3daa3-54e3-4b61-b9e8-1800fc8f8860",
+                  "type": "PipelineReference"
+                },
+                "parameters": {},
+                "waitOnCompletion": true
+              },
+              "policy": {
+                "secureInput": false
+              },
+              "name": "Load DimFact Tables - Gold Zone",
+              "dependsOn": [
+                {
+                  "activity": "Landing To Silver Zone",
+                  "dependencyConditions": [
+                    "Succeeded"
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "Delete",
+              "typeProperties": {
+                "enableLogging": false,
+                "datasetSettings": {
+                  "type": "Binary",
+                  "typeProperties": {
+                    "location": {
+                      "type": "AzureBlobFSLocation",
+                      "fileSystem": "landing",
+                      "folderPath": {
+                        "value": "@concat(\n   \n     toLower(pipeline().parameters.p_PlatformName)\n      ,'/'\n    ,toLower(pipeline().parameters.p_Domain)\n    ,'/'\n    , toLower(pipeline().parameters.p_ProjectName)\n    ,'/'\n    , toLower(pipeline().parameters.p_DataSourceName)\n     ,'/'\n    , toLower(pipeline().parameters.p_EntityName)\n)",
+                        "type": "Expression"
+                      },
+                      "fileName": {
+                        "value": "@variables('v_FileName')",
+                        "type": "Expression"
+                      }
+                    }
+                  },
+                  "externalReferences": {
+                    "connection": "bc7273da-a3ef-46dd-8687-f5a403cf491f"
+                  },
+                  "annotations": []
+                },
+                "storeSettings": {
+                  "type": "AzureBlobFSReadSettings",
+                  "recursive": true,
+                  "enablePartitionDiscovery": false
+                }
+              },
+              "policy": {
+                "timeout": "0.12:00:00",
+                "retry": 0,
+                "retryIntervalInSeconds": 30,
+                "secureInput": false,
+                "secureOutput": false
+              },
+              "name": "Clear Directory - Landing Zone",
+              "dependsOn": [
+                {
+                  "activity": "Load DimFact Tables - Gold Zone",
+                  "dependencyConditions": [
+                    "Succeeded"
+                  ]
+                }
+              ]
+            }
+          ],
+          "ifFalseActivities": []
+        },
+        "name": "Landing Zone To Gold Zone - Citibikes",
+        "dependsOn": [
+          {
+            "activity": "Check If File Exists",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ]
+      },
+      {
+        "type": "GetMetadata",
+        "typeProperties": {
+          "datasetSettings": {
+            "type": "DelimitedText",
+            "typeProperties": {
+              "location": {
+                "type": "AzureBlobFSLocation",
+                "fileSystem": "landing",
+                "folderPath": {
+                  "value": "@concat(\n   \n     toLower(pipeline().parameters.p_PlatformName)\n      ,'/'\n    ,toLower(pipeline().parameters.p_Domain)\n    ,'/'\n    , toLower(pipeline().parameters.p_ProjectName)\n    ,'/'\n    , toLower(pipeline().parameters.p_DataSourceName)\n     ,'/'\n    , toLower(pipeline().parameters.p_EntityName)\n)",
+                  "type": "Expression"
+                }
+              },
+              "columnDelimiter": ",",
+              "quoteChar": "\"",
+              "escapeChar": "\\",
+              "firstRowAsHeader": true
+            },
+            "schema": [],
+            "externalReferences": {
+              "connection": "bc7273da-a3ef-46dd-8687-f5a403cf491f"
+            },
+            "annotations": []
+          },
+          "fieldList": [
+            "childItems"
+          ],
+          "storeSettings": {
+            "type": "AzureBlobFSReadSettings",
+            "enablePartitionDiscovery": false
+          },
+          "formatSettings": {
+            "type": "DelimitedTextReadSettings"
+          }
+        },
+        "policy": {
+          "timeout": "0.12:00:00",
+          "retry": 0,
+          "retryIntervalInSeconds": 30,
+          "secureInput": false,
+          "secureOutput": false
+        },
+        "name": "Get FileName",
+        "dependsOn": []
+      },
+      {
+        "type": "SetVariable",
+        "typeProperties": {
+          "variableName": "v_FileName",
+          "value": {
+            "value": "@if(equals(length(activity('Get FileName').output.childItems), 0), 'NoFileFound', activity('Get FileName').output.childItems[0].name)",
+            "type": "Expression"
+          }
+        },
+        "policy": {
+          "secureInput": false,
+          "secureOutput": false
+        },
+        "name": "Set FileName",
+        "dependsOn": [
+          {
+            "activity": "Get FileName",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ]
+      }
+    ],
+    "parameters": {
+      "p_Domain": {
+        "type": "string",
+        "defaultValue": "transportation"
+      },
+      "p_ProjectName": {
+        "type": "string",
+        "defaultValue": "citibikes"
+      },
+      "p_DataSourceName": {
+        "type": "string",
+        "defaultValue": "github"
+      },
+      "p_PlatformName": {
+        "type": "string",
+        "defaultValue": "fabric"
+      },
+      "p_EntityName": {
+        "type": "string",
+        "defaultValue": "trips"
+      },
+      "landing_folder_path": {
+        "type": "string",
+        "defaultValue": "Files"
+      },
+      "p_ProcessingTime": {
+        "type": "string"
+      }
+    },
+    "variables": {
+      "v_FileName": {
+        "type": "String"
+      }
+    }
+  }
+}
