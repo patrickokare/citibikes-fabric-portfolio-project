@@ -1,22 +1,3 @@
-# Fabric notebook source
-
-# METADATA ********************
-
-# META {
-# META   "kernel_info": {
-# META     "name": "synapse_pyspark"
-# META   },
-# META   "dependencies": {
-# META     "lakehouse": {
-# META       "default_lakehouse": "e8b06649-cbdc-4b98-89b9-ad244d20a675",
-# META       "default_lakehouse_name": "dataml_lakehouse",
-# META       "default_lakehouse_workspace_id": "eda47f07-ebf2-41e7-8215-a7c5aa53a9d8"
-# META     }
-# META   }
-# META }
-
-# CELL ********************
-
 dimstation_df = spark.sql("""
 WITH ProcessedFiles AS (
     SELECT DISTINCT FileName 
@@ -84,83 +65,42 @@ SELECT
     NULL AS UpdatedDate,
     S.HASH_ID
 FROM DeduplicatedStations S
-LEFT JOIN citibikes_gold.dimstationlocation SL ON S.StationID = SL.StationLocationID;
+LEFT JOIN citibikes_gold.dimstationlocation SL ON S.StationID = SL.StationLocationID
 """)
 
-# METADATA ********************
-
-# META {
-# META   "language": "python",
-# META   "language_group": "synapse_pyspark"
-# META }
-
-# CELL ********************
-
-# Create a temporary view
 dimstation_df.createOrReplaceTempView("vw_DimStation")
 
-# METADATA ********************
+MERGE INTO citibikes_gold.dimstation AS tgt
+USING vw_DimStation AS src
+ON tgt.StationID = src.StationID
+WHEN MATCHED AND (
+        src.HASH_ID <> tgt.HASH_ID
+        OR src.FileName <> tgt.FileName
+    ) THEN
+  UPDATE SET
+    tgt.StationName = src.StationName,
+    tgt.StationLocationKey = src.StationLocationKey,
+    tgt.FileName = src.FileName,
+    tgt.SourceSystem = src.SourceSystem,
+    tgt.UpdatedDate = current_timestamp(),
+    tgt.HASH_ID = src.HASH_ID
+WHEN NOT MATCHED THEN
+  INSERT (
+    StationKey, StationID, StationName, StationLocationKey, FileName, SourceSystem, InsertedDate, UpdatedDate, HASH_ID
+  )
+  VALUES (
+    src.StationKey, src.StationID, src.StationName, src.StationLocationKey, src.FileName, src.SourceSystem, src.InsertedDate, src.UpdatedDate, src.HASH_ID
+  )
 
-# META {
-# META   "language": "python",
-# META   "language_group": "synapse_pyspark"
-# META }
-
-# CELL ********************
-
-# MAGIC %%sql
-# MAGIC MERGE INTO citibikes_gold.dimstation AS tgt
-# MAGIC USING vw_DimStation AS src
-# MAGIC ON tgt.StationID = src.StationID
-# MAGIC WHEN MATCHED AND (
-# MAGIC         src.HASH_ID <> tgt.HASH_ID -- Detect changes based on the HASH_ID
-# MAGIC         OR src.FileName <> tgt.FileName -- Ensure temporal accuracy
-# MAGIC     ) THEN
-# MAGIC   UPDATE SET
-# MAGIC     tgt.StationName = src.StationName,
-# MAGIC     tgt.StationLocationKey = src.StationLocationKey, -- Update FK if necessary
-# MAGIC     tgt.FileName = src.FileName,
-# MAGIC     tgt.SourceSystem = src.SourceSystem,
-# MAGIC     tgt.UpdatedDate = current_timestamp(),
-# MAGIC     tgt.HASH_ID = src.HASH_ID
-# MAGIC WHEN NOT MATCHED THEN
-# MAGIC   INSERT (
-# MAGIC     StationKey, StationID, StationName, StationLocationKey, FileName, SourceSystem, InsertedDate, UpdatedDate, HASH_ID
-# MAGIC   )
-# MAGIC   VALUES (
-# MAGIC     src.StationKey, src.StationID, src.StationName, src.StationLocationKey, src.FileName, src.SourceSystem, src.InsertedDate, src.UpdatedDate, src.HASH_ID
-# MAGIC   );
-
-# METADATA ********************
-
-# META {
-# META   "language": "sparksql",
-# META   "language_group": "synapse_pyspark"
-# META }
-
-# CELL ********************
-
-# MAGIC %%sql
-# MAGIC CREATE TABLE citibikes_gold.dimstation (
-# MAGIC 
-# MAGIC 
-# MAGIC    StationKey INT NOT NULL,
-# MAGIC     StationID STRING NOT NULL,
-# MAGIC     StationName STRING,
-# MAGIC     StationLocationKey INT NOT NULL,
-# MAGIC 
-# MAGIC     FileName STRING,
-# MAGIC 
-# MAGIC     SourceSystem STRING, -- Source system for data lineage
-# MAGIC     InsertedDate TIMESTAMP NOT NULL, -- Date the record was inserted
-# MAGIC     UpdatedDate TIMESTAMP, -- Date the record was last updated
-# MAGIC     HASH_ID STRING NOT NULL -- Hash value for deduplication and tracking changes
-# MAGIC )
-# MAGIC USING DELTA;
-
-# METADATA ********************
-
-# META {
-# META   "language": "sparksql",
-# META   "language_group": "synapse_pyspark"
-# META }
+CREATE TABLE IF NOT EXISTS citibikes_gold.dimstation (
+    StationKey INT NOT NULL,
+    StationID STRING NOT NULL,
+    StationName STRING,
+    StationLocationKey INT NOT NULL,
+    FileName STRING,
+    SourceSystem STRING,
+    InsertedDate TIMESTAMP NOT NULL,
+    UpdatedDate TIMESTAMP,
+    HASH_ID STRING NOT NULL
+)
+USING DELTA
