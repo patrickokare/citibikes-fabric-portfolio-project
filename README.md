@@ -2,7 +2,7 @@
 
 This repository contains the full implementation of a modern **CitiBike NYC Lakehouse**, designed and built using **Microsoft Fabric**, **Delta Lake**, and **Kimball Data Modeling** principles.
 
-> 📍 Project Title: `dimfact`  
+> 📍 Project Title: `Citibikes-Integration`  
 > 🧱 Architecture: Medallion (Bronze → Silver → Gold)  
 > 📊 Modeling: Dimensional (Star Schema)  
 > ☁️ Platform: Microsoft Fabric (Lakehouse, Pipelines, Notebooks)
