@@ -33,3 +33,5 @@ It uses Delta Lake, PySpark, and Fabric Pipelines to build a scalable ingestion 
 
 ---
 
+- **Patrick Okare.**  
+  Lead Data Engineer | Data Storyteller | Building Lakehouses with Purpose  
